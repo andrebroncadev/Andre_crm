@@ -258,8 +258,8 @@ function contactNameCompare(a,b){let an=String(a.name||'').trim(),bn=String(b.na
 function contactMissingFields(c){
  const missing=[];
  const name=String(c.name||'').trim();
- if(!name||/^(?:à identificar|a identificar|contato a identificar|sem nome|não identificado|nao identificado|contato sem nome|contato\\s*\\d*)/i.test(name)||/^\\+?[\\d\\s().-]+$/.test(name))missing.push('name');
- if(!String(c.phone||'').replace(/\\D/g,''))missing.push('phone');
+ if(!name||/^(?:à identificar|a identificar|contato a identificar|sem nome|não identificado|nao identificado|contato sem nome|contato\s*\d*)/i.test(name)||/^\+?[\d\s().-]+$/.test(name))missing.push('name');
+ if(!String(c.phone||'').replace(/\D/g,''))missing.push('phone');
  if(!(Array.isArray(c.roles)?c.roles:[]).filter(r=>r&&r!=='À qualificar').length)missing.push('roles');
  if(!String(c.source||'').trim())missing.push('source');
  if(!String(c.notes||'').trim())missing.push('notes');
