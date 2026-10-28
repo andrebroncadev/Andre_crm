@@ -259,28 +259,23 @@ function contactMissingFields(c){
  const missing=[];
  const name=String(c.name||'').trim();
  if(!name||/^(?:à identificar|a identificar|contato a identificar|sem nome|não identificado|nao identificado|contato sem nome|contato\s*\d*)/i.test(name)||/^\+?[\d\s().-]+$/.test(name))missing.push('name');
- if(!String(c.phone||'').replace(/\D/g,''))missing.push('phone');
- if(!(Array.isArray(c.roles)?c.roles:[]).filter(r=>r&&r!=='À qualificar').length)missing.push('roles');
- if(!String(c.source||'').trim())missing.push('source');
- if(!String(c.notes||'').trim())missing.push('notes');
- if(!String(c.email||'').trim())missing.push('email');
- if(!String(c.location||'').trim())missing.push('location');
- if(!String(c.rank||'').trim())missing.push('rank');
- if(c.status==='review'||c.data_confidence==='review')missing.push('review');
+ if(!String(c.phone||'').replace(/\D/g,'')&&!String(c.email||'').trim())missing.push('contact');
+ const roles=Array.isArray(c.roles)?c.roles:[];
+ if(!roles.some(r=>r&&r!=='À qualificar'))missing.push('roles');
  return missing;
 }
 function contactsPage(){
  let q=state.query.toLowerCase();
- const fieldLabels={priority:'Priorizar: nome, papel ou revisão',name:'Nome pendente / não identificado',phone:'Telefone ausente',roles:'Papel comercial à qualificar',source:'Origem ausente',notes:'Contexto comercial ausente',email:'E-mail ausente',location:'Cidade / região ausente',rank:'Classificação Buffini ausente',review:'Marcado para revisão'};
- const pending=state.contacts.filter(c=>{const m=contactMissingFields(c);return m.includes('name')||m.includes('roles')||m.includes('review')});
+ const fieldLabels={priority:'Todos os dados obrigatórios pendentes',name:'Nome',contact:'Telefone ou e-mail',roles:'Título/função'};
+ const pending=state.contacts.filter(c=>contactMissingFields(c).length>0);
  let list=state.contacts.filter(c=>{
   const text=[c.name,c.phone,c.email,(c.roles||[]).join(' '),c.source,c.location,c.notes].join(' ').toLowerCase();
   const missing=contactMissingFields(c);
-  let roleOk=state.filter==='pending'?((state.pendingField==='priority'?(missing.includes('name')||missing.includes('roles')||missing.includes('review')):missing.includes(state.pendingField))):state.filter==='all'||(state.filter==='unqualified'?(c.roles||[]).includes('À qualificar'):(c.roles||[]).includes(state.filter));
+  let roleOk=state.filter==='pending'?((state.pendingField==='priority'?missing.length>0:missing.includes(state.pendingField))):state.filter==='all'||(state.filter==='unqualified'?(c.roles||[]).includes('À qualificar'):(c.roles||[]).includes(state.filter));
   return text.includes(q)&&roleOk
  }).sort(contactNameCompare);
  let tabs=[['all','Todos'],['pending','Dados pendentes ('+pending.length+')'],['Comprador','Compradores'],['Locatário','Locatários'],['Proprietário','Proprietários'],['Vendedor','Vendedores'],['Locador','Locadores'],['Parceiro','Parceiros'],['unqualified','À qualificar']];
- const pendingControls=state.filter==='pending'?'<div class="searchrow"><select id="pendingField">'+Object.entries(fieldLabels).map(([k,v])=>'<option value="'+k+'" '+(state.pendingField===k?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div><p class="muted">A lista prioriza nomes não identificados, papéis ainda não qualificados e registros marcados para revisão. E-mail e localização podem ser complementados depois.</p>':'';
+ const pendingControls=state.filter==='pending'?'<div class="searchrow"><select id="pendingField">'+Object.entries(fieldLabels).map(([k,v])=>'<option value="'+k+'" '+(state.pendingField===k?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></div><p class="muted">Só são obrigatórios: nome, telefone ou e-mail (pelo menos um), e título/função. Localização, origem, observações e classificação são complementares.</p>':'';
  return heading('Contatos','Abra a conversa no WhatsApp, volte ao CRM e complete os dados pendentes.',btn('＋ Novo contato','new-contact'))+'<div class="tabs">'+tabs.map(([k,v])=>'<button class="'+(state.filter===k?'active':'')+'" data-filter="'+esc(k)+'">'+v+'</button>').join('')+'</div>'+pendingControls+'<div class="searchrow"><input id="search" placeholder="Buscar nome, telefone, e-mail ou contexto" value="'+esc(state.query)+'"></div>'+table(['NOME','TELEFONE / E-MAIL','PAPÉIS','ORIGEM','RANK','DADOS','AÇÕES'],list.map(c=>{const wa=whatsappUrl(c.phone);const missing=contactMissingFields(c);return '<tr><td><strong>'+esc(contactDisplayName(c))+'</strong><div class="muted">'+esc(c.location||'')+'</div>'+(missing.length?'<div class="muted">'+esc(missing.length+' pendência(s)')+'</div>':'')+'</td><td>'+esc(c.phone||'—')+'<div class="muted">'+esc(c.email||'')+'</div>'+(wa?'<a class="btn whatsapp-btn" style="display:inline-block;margin-top:6px;text-decoration:none" href="'+esc(wa)+'" target="_blank" rel="noopener noreferrer">Abrir WhatsApp ↗</a>':'<div class="muted">Sem telefone para abrir WhatsApp</div>')+'</td><td>'+esc((c.roles||[]).join(', ')||'À qualificar')+'</td><td>'+esc(c.source||'—')+'</td><td>'+statusPill(c.rank||'C')+'</td><td>'+statusPill(c.data_confidence||'review')+'</td><td><button class="btn" data-action="edit" data-table="contacts" data-id="'+c.id+'">Editar dados</button></td></tr>'}).join('')||'<tr><td colspan="7">'+empty('Nenhum contato encontrado.')+'</td></tr>')
 }
 function dealContact(d){return state.contacts.find(c=>c.id===d.contact_id)||null}
